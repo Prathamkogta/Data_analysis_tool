@@ -1026,6 +1026,7 @@ class AutomatedDataAnalyzer:
         # Heatmap
         fig = px.imshow(
             corr_matrix,
+            text_auto=True,
             title="Correlation Matrix Heatmap",
             color_continuous_scale="RdBu",
             aspect="auto",
