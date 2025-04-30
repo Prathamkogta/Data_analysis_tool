@@ -108,6 +108,7 @@ class AutomatedDataAnalyzer:
             df.columns = cols
         
         return df
+
     def load_data(self):
         """Handle data loading in the sidebar"""
         st.sidebar.header("Data Upload")
@@ -124,26 +125,27 @@ class AutomatedDataAnalyzer:
             if uploaded_file:
                 try:
                     file_ext = uploaded_file.name.split('.')[-1].lower()
+                    
+                    # Skip rows option
+                    skip_rows = 0
+                    if st.sidebar.checkbox("Skip rows at top"):
+                        skip_rows = st.sidebar.number_input("Number of rows to skip", min_value=0, max_value=100, value=0)
+                    
                     if file_ext == 'csv':
                         # Try different encodings if needed
                         try:
-                            self.df = pd.read_csv(uploaded_file)
+                            self.df = pd.read_csv(uploaded_file, skiprows=skip_rows)
                         except UnicodeDecodeError:
-                            self.df = pd.read_csv(uploaded_file, encoding='latin1')
+                            self.df = pd.read_csv(uploaded_file, encoding='latin1', skiprows=skip_rows)
                         self.df = self.clean_dataframe(self.df)
                     elif file_ext in ['xls', 'xlsx']:
-                        self.df = pd.read_excel(uploaded_file)
+                        self.df = pd.read_excel(uploaded_file, skiprows=skip_rows)
                         self.df = self.clean_dataframe(self.df)
                     elif file_ext == 'json':
                         self.df = pd.read_json(uploaded_file)
-                        self.df = self.clean_dataframe(self.df)
-                    
-                    # Let user select which rows to skip if needed
-                    if st.sidebar.checkbox("Skip rows at top"):
-                        skip_rows = st.sidebar.number_input("Number of rows to skip", min_value=0, max_value=100, value=0)
                         if skip_rows > 0:
                             self.df = self.df.iloc[skip_rows:]
-                            self.df = self.df.reset_index(drop=True)
+                        self.df = self.clean_dataframe(self.df)
                     
                     st.sidebar.success("Data loaded successfully!")
                 except Exception as e:
