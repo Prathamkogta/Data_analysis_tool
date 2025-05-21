@@ -52,6 +52,12 @@ st.markdown("""
         border-radius: 5px;
         margin-bottom: 1rem;
     }
+    .insights-box {
+        border-radius: 10px;
+        padding: 1rem;
+        margin-top: 1rem;
+        border-left: 5px solid #3498db;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -360,6 +366,20 @@ class AutomatedDataAnalyzer:
                     color_discrete_sequence=['#3498db']
                 )
                 st.plotly_chart(fig1, use_container_width=True)
+                
+                # Histogram insights
+                with st.expander("Histogram Insights"):
+                    st.markdown("""
+                    <div class='insights-box'>
+                        <h4>Histogram Interpretation</h4>
+                        <ul>
+                            <li>This histogram shows the frequency distribution of values in the <b>{}</b> column.</li>
+                            <li>The x-axis represents the range of values, divided into bins.</li>
+                            <li>The y-axis shows how many data points fall into each bin.</li>
+                            <li>The shape of the histogram can reveal whether the data is normally distributed, skewed, or has other patterns.</li>
+                        </ul>
+                    </div>
+                    """.format(selected_col), unsafe_allow_html=True)
             
             with col2:
                 # Boxplot
@@ -370,6 +390,21 @@ class AutomatedDataAnalyzer:
                     color_discrete_sequence=['#e74c3c']
                 )
                 st.plotly_chart(fig2, use_container_width=True)
+                
+                # Boxplot insights
+                with st.expander("Boxplot Insights"):
+                    st.markdown("""
+                    <div class='insights-box'>
+                        <h4>Boxplot Interpretation</h4>
+                        <ul>
+                            <li>The box represents the interquartile range (IQR) containing the middle 50% of data.</li>
+                            <li>The line inside the box shows the median value.</li>
+                            <li>The whiskers typically extend to 1.5 times the IQR from the box.</li>
+                            <li>Points outside the whiskers are potential outliers.</li>
+                            <li>This visualization helps identify skewness, spread, and outliers in your data.</li>
+                        </ul>
+                    </div>
+                    """, unsafe_allow_html=True)
             
             # Create a combined figure for download
             combined_fig = go.Figure()
@@ -423,6 +458,20 @@ class AutomatedDataAnalyzer:
         )
         st.plotly_chart(fig, use_container_width=True)
         
+        # Missing values insights
+        with st.expander("Missing Values Insights"):
+            st.markdown("""
+            <div class='insights-box'>
+                <h4>Missing Values Interpretation</h4>
+                <ul>
+                    <li>This analysis shows which columns have missing data and the percentage of missing values.</li>
+                    <li>Columns with high percentages (e.g., >30%) of missing data may need special treatment or might be candidates for removal.</li>
+                    <li>Patterns in missing data can sometimes reveal important information about data collection processes.</li>
+                    <li>Consider the impact of missing data on your analysis before choosing a handling method.</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+        
         # Handling options
         st.subheader("Handle Missing Values", anchor=False)
         handling_method = st.selectbox(
@@ -447,7 +496,15 @@ class AutomatedDataAnalyzer:
             
             if st.button("Apply changes to dataset"):
                 self.df = cleaned_df
+                st.session_state.df_modified = True  # Flag to indicate dataset was modified
                 st.success("Missing values handled successfully! The dataset has been updated.")
+                st.rerun()
+        
+        # Show option to analyze modified data
+        if st.session_state.get('df_modified', False):
+            if st.button("Analyze Modified Data"):
+                if 'current_analysis' in st.session_state:
+                    del st.session_state['current_analysis']
                 st.rerun()
         
         self.add_download_button(missing_summary, "missing_values_summary.csv")
@@ -544,6 +601,20 @@ class AutomatedDataAnalyzer:
             )
             st.plotly_chart(fig, use_container_width=True)
             
+            # Time series insights
+            with st.expander("Time Series Insights"):
+                st.markdown("""
+                <div class='insights-box'>
+                    <h4>Time Series Interpretation</h4>
+                    <ul>
+                        <li>This plot shows how the selected variables change over time.</li>
+                        <li>Look for trends (consistent upward or downward movement), seasonality (regular patterns), and anomalies.</li>
+                        <li>Hover over the lines to see exact values at specific time points.</li>
+                        <li>Compare multiple variables by checking how their patterns relate to each other.</li>
+                    </ul>
+                </div>
+                """, unsafe_allow_html=True)
+            
             # Time range information
             min_date = self.df[time_col].min()
             max_date = self.df[time_col].max()
@@ -597,6 +668,21 @@ class AutomatedDataAnalyzer:
             template="plotly_white"
         )
         st.plotly_chart(fig, use_container_width=True)
+        
+        # Trend analysis insights
+        with st.expander("Trend Analysis Insights"):
+            st.markdown(f"""
+            <div class='insights-box'>
+                <h4>Trend Analysis Interpretation</h4>
+                <ul>
+                    <li>The moving average (red line) smooths out short-term fluctuations to reveal the underlying trend.</li>
+                    <li>A {window_size}-period window means each point represents the average of {window_size} consecutive data points.</li>
+                    <li>Larger window sizes show longer-term trends but may obscure important short-term patterns.</li>
+                    <li>Compare the smoothed line with the original data (blue) to assess how well it captures the trend.</li>
+                    <li>Upward or downward slopes in the moving average indicate increasing or decreasing trends.</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
         
         self.add_plot_download_button(fig, "trend_analysis.html")
 
@@ -670,6 +756,23 @@ class AutomatedDataAnalyzer:
             
             st.plotly_chart(fig, use_container_width=True)
             
+            # Seasonal decomposition insights
+            with st.expander("Seasonal Decomposition Insights"):
+                st.markdown(f"""
+                <div class='insights-box'>
+                    <h4>Seasonal Decomposition Interpretation</h4>
+                    <ul>
+                        <li>This analysis breaks down the time series into trend, seasonal, and residual components.</li>
+                        <li><b>Observed</b>: The original time series data.</li>
+                        <li><b>Trend</b>: The long-term progression of the series (increasing, decreasing, or stationary).</li>
+                        <li><b>Seasonal</b>: The repeating short-term cycle in the data (period = {period} observations).</li>
+                        <li><b>Residual</b>: The "noise" remaining after removing trend and seasonal components.</li>
+                        <li>A strong seasonal pattern suggests predictable periodic behavior in your data.</li>
+                        <li>Large residuals may indicate outliers or unexplained variability.</li>
+                    </ul>
+                </div>
+                """, unsafe_allow_html=True)
+            
             # Individual components
             st.subheader("Individual Components", anchor=False)
             
@@ -742,6 +845,20 @@ class AutomatedDataAnalyzer:
             template="plotly_white"
         )
         st.plotly_chart(fig, use_container_width=True)
+        
+        # Comparison insights
+        with st.expander("Comparison Insights"):
+            st.markdown("""
+            <div class='insights-box'>
+                <h4>Time Period Comparison Interpretation</h4>
+                <ul>
+                    <li>This comparison helps identify changes in patterns between two time periods.</li>
+                    <li>Look for differences in overall levels, trends, or variability between the periods.</li>
+                    <li>Significant differences may indicate changes in underlying processes or external factors.</li>
+                    <li>The statistical comparison below quantifies these differences.</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
         
         # Statistical comparison
         comparison_data = {
@@ -838,6 +955,21 @@ class AutomatedDataAnalyzer:
             
             st.plotly_chart(fig, use_container_width=True)
             
+            # Periodic analysis insights
+            with st.expander("Periodic Analysis Insights"):
+                st.markdown(f"""
+                <div class='insights-box'>
+                    <h4>{analysis_period} Pattern Interpretation</h4>
+                    <ul>
+                        <li>This analysis shows how the variable changes by {period_name.lower()}.</li>
+                        <li>The blue line represents the average value for each {period_name.lower()}.</li>
+                        <li>The shaded area shows the range between minimum and maximum values.</li>
+                        <li>Look for patterns that repeat at regular intervals (e.g., higher values at certain times).</li>
+                        <li>The standard deviation (in the table) indicates how much variability exists within each {period_name.lower()}.</li>
+                    </ul>
+                </div>
+                """, unsafe_allow_html=True)
+            
             # Show statistics table
             st.write(f"{analysis_period} Statistics:")
             st.dataframe(period_stats.style.background_gradient(cmap='Blues'))
@@ -889,6 +1021,20 @@ class AutomatedDataAnalyzer:
                 template="plotly_white"
             )
             st.plotly_chart(fig, use_container_width=True)
+            
+            # Weekday vs weekend insights
+            with st.expander("Weekday/Weekend Insights"):
+                st.markdown("""
+                <div class='insights-box'>
+                    <h4>Weekday vs Weekend Interpretation</h4>
+                    <ul>
+                        <li>This comparison shows differences in distributions between weekdays and weekends.</li>
+                        <li>The box shows the interquartile range (middle 50% of values), with the line indicating the median.</li>
+                        <li>Whiskers extend to 1.5 times the IQR, with points beyond considered outliers.</li>
+                        <li>Significant differences in medians or distributions may indicate weekly patterns in your data.</li>
+                    </ul>
+                </div>
+                """, unsafe_allow_html=True)
             
             # Statistical comparison
             comparison_data = {
@@ -995,6 +1141,21 @@ class AutomatedDataAnalyzer:
             
             st.plotly_chart(fig, use_container_width=True)
             
+            # Rolling statistics insights
+            with st.expander("Rolling Statistics Insights"):
+                st.markdown(f"""
+                <div class='insights-box'>
+                    <h4>Rolling Statistics Interpretation</h4>
+                    <ul>
+                        <li>Rolling statistics help smooth noise and reveal underlying patterns in time series data.</li>
+                        <li>The {stat_type.lower()} is calculated over a window of {window_size} consecutive observations.</li>
+                        <li>Larger windows provide smoother results but may obscure short-term patterns.</li>
+                        <li>Rolling standard deviation can help identify periods of increased volatility.</li>
+                        <li>Rolling min/max can help identify extreme values over time.</li>
+                    </ul>
+                </div>
+                """, unsafe_allow_html=True)
+            
             # Create a dataframe with the rolling stats
             rolling_df = pd.DataFrame({
                 'Date': temp_df.index,
@@ -1028,7 +1189,6 @@ class AutomatedDataAnalyzer:
         # Heatmap
         fig = px.imshow(
             corr_matrix,
-            text_auto=True,
             title="Correlation Matrix Heatmap",
             color_continuous_scale="RdBu",
             aspect="auto",
@@ -1036,6 +1196,21 @@ class AutomatedDataAnalyzer:
             zmax=1
         )
         st.plotly_chart(fig, use_container_width=True)
+        
+        # Correlation insights
+        with st.expander("Correlation Insights"):
+            st.markdown("""
+            <div class='insights-box'>
+                <h4>Correlation Interpretation</h4>
+                <ul>
+                    <li>Correlation measures the linear relationship between variables (-1 to 1).</li>
+                    <li>Values close to 1 indicate strong positive correlation (as one increases, so does the other).</li>
+                    <li>Values close to -1 indicate strong negative correlation (as one increases, the other decreases).</li>
+                    <li>Values near 0 suggest little to no linear relationship.</li>
+                    <li>Correlation does not imply causation - always consider the context.</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
         
         # Top correlations
         st.subheader("Top Correlations", anchor=False)
@@ -1067,6 +1242,22 @@ class AutomatedDataAnalyzer:
                 color=selected_cols[0] if len(selected_cols) > 0 else None
             )
             st.plotly_chart(fig, use_container_width=True)
+            
+            # Pairplot insights
+            with st.expander("Pairplot Insights"):
+                st.markdown("""
+                <div class='insights-box'>
+                    <h4>Pairplot Interpretation</h4>
+                    <ul>
+                        <li>The diagonal shows the distribution of each variable.</li>
+                        <li>Off-diagonal plots show relationships between pairs of variables.</li>
+                        <li>Look for linear or nonlinear patterns that suggest relationships.</li>
+                        <li>Clusters in the scatter plots may indicate subgroups in your data.</li>
+                        <li>Outliers appear as points far from the main cluster.</li>
+                    </ul>
+                </div>
+                """, unsafe_allow_html=True)
+            
             self.add_plot_download_button(fig, "feature_pairplot.html")
         
         self.add_download_button(corr_matrix, "correlation_matrix.csv")
@@ -1219,7 +1410,7 @@ class AutomatedDataAnalyzer:
         self.load_data()
         
         if self.df is not None:
-            if st.sidebar.button("← Back to Main Menu"):
+            if st.sidebar.button("↩ Back to Main Menu"):
                 if 'current_analysis' in st.session_state:
                     del st.session_state['current_analysis']
                 st.rerun()
