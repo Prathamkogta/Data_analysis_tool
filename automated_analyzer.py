@@ -7,6 +7,7 @@ from datetime import datetime
 import base64
 from io import BytesIO
 import re
+import requests
 
 # Configure page
 st.set_page_config(
@@ -23,7 +24,6 @@ st.markdown("""
         padding: 2rem;
     }
     .analysis-section {
-        background-color: #f8f9fa;
         border-radius: 10px;
         padding: 2rem;
         margin-bottom: 2rem;
@@ -64,6 +64,7 @@ st.markdown("""
 class AutomatedDataAnalyzer:
     def __init__(self):
         self.df = None
+        self.DEFAULT_GEMINI_API_KEY = "AIzaSyB9bZC8XAPMqsimzbqL4W5Fg5PDbY8-ZwY"  # Added default API key
         self.initialize_ui()
 
     def initialize_ui(self):
@@ -74,6 +75,78 @@ class AutomatedDataAnalyzer:
             Upload your dataset and explore various analysis options
         </div>
         """, unsafe_allow_html=True)
+    
+    def show_chatbot(self):
+        st.header("💬 Chat with DataBot (Gemini AI)", anchor=False)
+        st.markdown("""
+        <div class='analysis-section'>
+        <b>Ask any question about your uploaded dataset. The Gemini AI will analyze your data and provide answers, summaries, or generate reports as requested.</b>
+        </div>
+        """, unsafe_allow_html=True)
+
+        if self.df is None:
+            st.warning("No data loaded. Please upload a dataset first.")
+            return
+
+        # Show a preview of the data
+        st.subheader("Dataset Preview")
+        st.dataframe(self.df.head(3))
+        st.write(f"Shape: {self.df.shape}")
+
+        # Initialize chat history
+        if "chat_history" not in st.session_state:
+            st.session_state.chat_history = []
+
+        # Show chat history
+        for msg in st.session_state.chat_history:
+            with st.chat_message(msg["role"]):
+                st.write(msg["content"])
+
+        # User input
+        user_input = st.chat_input("Ask anything about your data (e.g., 'Summarize the dataset', 'What are the top 5 values in column X?', 'Generate a report', etc.)")
+        if user_input:
+            st.session_state.chat_history.append({"role": "user", "content": user_input})
+
+            # Prepare context for Gemini: send a sample of the dataframe as context
+            data_context = self.df.head(100).to_csv(index=False)  # Limit to 100 rows for prompt size
+            prompt = (
+                f"You are a data analysis assistant. The user uploaded the following dataset (CSV format, first 100 rows):\n"
+                f"{data_context}\n\n"
+                f"User query: {user_input}\n"
+                "Please analyze the data and answer the user's question. If a report is requested, generate a concise summary with statistics."
+            )
+
+            # Get Gemini API response using the default key
+            response_text = self.get_gemini_response(prompt, self.DEFAULT_GEMINI_API_KEY)
+            st.session_state.chat_history.append({"role": "assistant", "content": response_text})
+
+            with st.chat_message("assistant"):
+                st.write(response_text)
+        
+        if st.button("🗑️ Clear Chat History"):
+            st.session_state.chat_messages = []
+            st.rerun()       
+
+    def get_gemini_response(self, prompt, api_key):
+        # Use Gemini free API endpoint
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+        headers = {"Content-Type": "application/json"}
+        data = {
+            "contents": [{"parts": [{"text": prompt}]}]
+        }
+        try:
+            resp = requests.post(url, headers=headers, json=data, timeout=60)
+            if resp.status_code == 200:
+                out = resp.json()
+                return out["candidates"][0]["content"]["parts"][0]["text"]
+            elif resp.status_code == 429:
+                return "⚠️ You have reached the free Gemini API rate limit. Please try again later."
+            elif resp.status_code == 401:
+                return "⚠️ Invalid Gemini API key. Please check your key."
+            else:
+                return f"⚠️ Gemini API error {resp.status_code}: {resp.text}"
+        except Exception as e:
+            return f"⚠️ Error: {str(e)}"
 
     def clean_dataframe(self, df):
         """Handle empty rows, multi-index headers, and clean column names with duplicate handling"""
@@ -211,6 +284,10 @@ class AutomatedDataAnalyzer:
             if st.button("📑 Generate Full Report", help="Generate a comprehensive report with all analyses"):
                 st.session_state.current_analysis = "full_report"
                 st.rerun()
+            
+            if st.button("💬 Chat with DataBot", help="Ask any question about your uploaded dataset using Gemini AI"):
+                st.session_state.current_analysis = "chatbot"
+                st.rerun()
 
         if hasattr(st.session_state, 'current_analysis'):
             st.markdown("---")
@@ -233,6 +310,8 @@ class AutomatedDataAnalyzer:
                 self.show_correlation_analysis()
             elif st.session_state.current_analysis == "full_report":
                 self.generate_full_report()
+            elif st.session_state.current_analysis == "chatbot":
+                self.show_chatbot()
             
             st.markdown("</div>", unsafe_allow_html=True)
 
